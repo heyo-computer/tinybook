@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "root": "/home/sarocu/Projects/tinybook",
+  "files": {
+    "bun-env.d.ts": {
+      "mtime": 1777394120,
+      "language": "typescript",
+      "symbols": []
+    },
+    "src/APITester.tsx": {
+      "mtime": 1777394120,
+      "language": "tsx",
+      "symbols": [
+        {
+          "name": "APITester",
+          "qualified": "APITester",
+          "kind": "function",
+          "start_line": 3,
+          "end_line": 39,
+          "start_byte": 56,
+          "end_byte": 1352,
+          "signature": "function APITester() {",
+          "parent": null
+        }
+      ]
+    },
+    "src/App.tsx": {
+      "mtime": 1777394120,
+      "language": "tsx",
+      "symbols": [
+        {
+          "name": "App",
+          "qualified": "App",
+          "kind": "function",
+          "start_line": 7,
+          "end_line": 22,
+          "start_byte": 140,
+          "end_byte": 536,
+          "signature": "function App() {",
+          "parent": null
+        }
+      ]
+    },
+    "src/frontend.tsx": {
+      "mtime": 1777394120,
+      "language": "tsx",
+      "symbols": []
+    },
+    "src/index.ts": {
+      "mtime": 1777394120,
+      "language": "typescript",
+      "symbols": [
+        {
+          "name": "GET",
+          "qualified": "GET",
+          "kind": "method",
+          "start_line": 10,
+          "end_line": 15,
+          "start_byte": 193,
+          "end_byte": 321,
+          "signature": "async GET(req) {",
+          "parent": null
+        },
+        {
+          "name": "PUT",
+          "qualified": "PUT",
+          "kind": "method",
+          "start_line": 16,
+          "end_line": 21,
+          "start_byte": 329,
+          "end_byte": 457,
+          "signature": "async PUT(req) {",
+          "parent": null
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "skills": {
+    "codegraph-edit": {
+      "source": "heyo-computer/printer",
+      "sourceType": "github",
+      "computedHash": "d1a9d1f4773bbdb5d31b8180a6080236e44d5df3a222a45338ae87e524c6859f"
+    },
+    "codegraph-search": {
+      "source": "heyo-computer/printer",
+      "sourceType": "github",
+      "computedHash": "b39bda6f697e7932c177d1f8c0937a8705f753092f4a07436c5c7e8a5df2bcc2"
+    },
+    "computer": {
+      "source": "heyo-computer/printer",
+      "sourceType": "github",
+      "computedHash": "c626635898ef8f9bb7c15a212e9b4cb6343bd57e49b41e361051fd71fbdc7c20"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+tools:
+    shell:
+        allow:
+            - cd *
+            - bun build *
+            - echo *
+            - heyvm-deploy *
+            - heyvm list
+            - heyvm deploy *
+            - curl *
+            - head *
+            - heyvm delete *
+            - "true"
+            - heyvm images list *
+            - grep *
+            - sleep 5
+            - heyvm exec dep-e701bc89 *
+            - sleep 10
+            - heyvm wait-for dep-e701bc89 *
+            - wc *
+            - heyvm list-running
+            - heyvm archive-dir *
+            - sleep 15
+            - sleep 30
+            - heyvm snapshot sb-da12e989 *
+            - sleep 20
+            - heyvm exec sb-da12e989 *
+            - heyvm create *
+            - heyvm exec sb-3986321b *
+            - bash
+            - rm *
+            - ls *
+            - rsync *
+            - heyvm mount *
+            - sleep 3
+            - heyvm update sb-3986321b *
+            - heyvm update printer-pin-libvirt *
+            - heyvm update *
+paths:
+    allow:
+        - path: /home/sarocu/Projects/printer-take-2/src/server/**
+          write: true
+        - path: /home/sarocu/Projects/printer-take-2/src/**
+          write: true
+        - path: /home/sarocu/Projects/printer-take-2/**
+          write: true

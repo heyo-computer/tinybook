@@ -7,19 +7,50 @@ import {
   readDoc,
   writeDoc,
 } from "./server/docs";
-import { runAgent, type ChatMessage } from "./server/agent";
-import { PIN, createSession, verifySession, revokeSession } from "./server/auth";
+import { setOrder } from "./server/order";
+import { runAgent, compactHistory, type ChatMessage } from "./server/agent";
+import { transcribe } from "./server/transcribe";
+import { polishDoc } from "./server/polish";
+import {
+  PIN,
+  READ_PIN,
+  createSession,
+  verifySession,
+  revokeSession,
+  type Role,
+} from "./server/auth";
 
-// Middleware to check authentication for protected routes
-function requireAuth(req: Request): { authorized: true } | { authorized: false; response: Response } {
+type AuthOk = { authorized: true; role: Role };
+type AuthFail = { authorized: false; response: Response };
+
+function requireAuth(req: Request): AuthOk | AuthFail {
   const sessionId = req.headers.get("x-session-id");
-  if (!sessionId || !verifySession(sessionId)) {
+  const session = sessionId ? verifySession(sessionId) : null;
+  if (!session) {
     return {
       authorized: false,
-      response: Response.json({ error: "Authentication required" }, { status: 401 }),
+      response: Response.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      ),
     };
   }
-  return { authorized: true };
+  return { authorized: true, role: session.role };
+}
+
+function requireOwner(req: Request): AuthOk | AuthFail {
+  const auth = requireAuth(req);
+  if (!auth.authorized) return auth;
+  if (auth.role !== "owner") {
+    return {
+      authorized: false,
+      response: Response.json(
+        { error: "Read-only session" },
+        { status: 403 },
+      ),
+    };
+  }
+  return auth;
 }
 
 const server = serve({
@@ -30,8 +61,12 @@ const server = serve({
       async POST(req) {
         const body = (await req.json()) as { pin: string };
         if (body.pin === PIN) {
-          const sessionId = createSession();
-          return Response.json({ sessionId });
+          const sessionId = createSession("owner");
+          return Response.json({ sessionId, role: "owner" });
+        }
+        if (body.pin === READ_PIN) {
+          const sessionId = createSession("reader");
+          return Response.json({ sessionId, role: "reader" });
         }
         return Response.json({ error: "Invalid PIN" }, { status: 401 });
       },
@@ -52,14 +87,32 @@ const server = serve({
         return Response.json(await listDocs());
       },
       async POST(req) {
-        const auth = requireAuth(req);
+        const auth = requireOwner(req);
         if (!auth.authorized) return auth.response;
-        const body = (await req.json()) as { title: string; content?: string };
+        const body = (await req.json()) as {
+          title: string;
+          kind?: "md" | "csv";
+          content?: string;
+        };
         if (!body?.title) {
           return Response.json({ error: "title required" }, { status: 400 });
         }
-        const doc = await createDoc(body.title, body.content);
+        const kind = body.kind === "csv" ? "csv" : "md";
+        const doc = await createDoc(body.title, kind, body.content);
         return Response.json(doc, { status: 201 });
+      },
+    },
+
+    "/api/docs/_order": {
+      async PUT(req) {
+        const auth = requireOwner(req);
+        if (!auth.authorized) return auth.response;
+        const body = (await req.json()) as { slugs: string[] };
+        if (!Array.isArray(body?.slugs)) {
+          return Response.json({ error: "slugs required" }, { status: 400 });
+        }
+        await setOrder(body.slugs);
+        return Response.json({ ok: true });
       },
     },
 
@@ -72,7 +125,7 @@ const server = serve({
         return Response.json(doc);
       },
       async PUT(req) {
-        const auth = requireAuth(req);
+        const auth = requireOwner(req);
         if (!auth.authorized) return auth.response;
         const body = (await req.json()) as { content: string };
         if (typeof body?.content !== "string") {
@@ -82,16 +135,73 @@ const server = serve({
         return Response.json(doc);
       },
       async DELETE(req) {
-        const auth = requireAuth(req);
+        const auth = requireOwner(req);
         if (!auth.authorized) return auth.response;
         const ok = await deleteDoc(req.params.slug);
         return Response.json({ ok });
       },
     },
 
-    "/api/agent/chat": {
+    "/api/docs/:slug/polish": {
       async POST(req) {
-        const auth = requireAuth(req);
+        const auth = requireOwner(req);
+        if (!auth.authorized) return auth.response;
+        try {
+          const body = (await req.json()) as {
+            apiKey: string;
+            model: string;
+            baseUrl?: string;
+          };
+          if (!body.apiKey || !body.model) {
+            return Response.json(
+              { error: "apiKey and model required (set in Settings)" },
+              { status: 400 },
+            );
+          }
+          const doc = await polishDoc({ slug: req.params.slug, ...body });
+          return Response.json(doc);
+        } catch (err: any) {
+          return Response.json(
+            { error: String(err?.message ?? err) },
+            { status: 500 },
+          );
+        }
+      },
+    },
+
+    "/api/agent/transcribe": {
+      async POST(req) {
+        const auth = requireOwner(req);
+        if (!auth.authorized) return auth.response;
+        try {
+          const form = await req.formData();
+          const audio = form.get("file");
+          const apiKey = String(form.get("apiKey") ?? "");
+          const model = String(form.get("model") ?? "");
+          const baseUrl = (form.get("baseUrl") as string | null) || undefined;
+          if (!(audio instanceof Blob)) {
+            return Response.json({ error: "file required" }, { status: 400 });
+          }
+          if (!apiKey || !model) {
+            return Response.json(
+              { error: "apiKey and model required (configure Mistral in Settings)" },
+              { status: 400 },
+            );
+          }
+          const text = await transcribe({ audio, apiKey, model, baseUrl });
+          return Response.json({ text });
+        } catch (err: any) {
+          return Response.json(
+            { error: String(err?.message ?? err) },
+            { status: 500 },
+          );
+        }
+      },
+    },
+
+    "/api/agent/compact": {
+      async POST(req) {
+        const auth = requireOwner(req);
         if (!auth.authorized) return auth.response;
         try {
           const body = (await req.json()) as {
@@ -99,6 +209,36 @@ const server = serve({
             apiKey: string;
             model: string;
             baseUrl?: string;
+          };
+          if (!body.apiKey || !body.model) {
+            return Response.json(
+              { error: "apiKey and model are required (set in Settings)" },
+              { status: 400 },
+            );
+          }
+          const result = await compactHistory(body);
+          return Response.json(result);
+        } catch (err: any) {
+          return Response.json(
+            { error: String(err?.message ?? err) },
+            { status: 500 },
+          );
+        }
+      },
+    },
+
+    "/api/agent/chat": {
+      async POST(req) {
+        const auth = requireOwner(req);
+        if (!auth.authorized) return auth.response;
+        try {
+          const body = (await req.json()) as {
+            messages: ChatMessage[];
+            apiKey: string;
+            model: string;
+            baseUrl?: string;
+            mentions?: string[];
+            tavilyApiKey?: string;
           };
           if (!body.apiKey || !body.model) {
             return Response.json(

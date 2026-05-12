@@ -9,6 +9,7 @@
     "start": "NODE_ENV=production bun src/index.ts"
   },
   "dependencies": {
+    "@paper-design/shaders-react": "^0.0.76",
     "react": "^19",
     "react-dom": "^19"
   },

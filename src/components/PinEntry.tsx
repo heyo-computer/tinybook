@@ -1,7 +1,8 @@
 import { useState } from "react";
+import type { Role } from "../lib/api";
 
 type PinEntryProps = {
-  onAuthenticated: (sessionId: string) => void;
+  onAuthenticated: (session: { sessionId: string; role: Role }) => void;
 };
 
 export function PinEntry({ onAuthenticated }: PinEntryProps) {
@@ -23,7 +24,8 @@ export function PinEntry({ onAuthenticated }: PinEntryProps) {
 
       const data = await res.json();
       if (res.ok) {
-        onAuthenticated(data.sessionId);
+        const role: Role = data.role === "reader" ? "reader" : "owner";
+        onAuthenticated({ sessionId: data.sessionId, role });
       } else {
         setError(data.error || "Authentication failed");
       }
